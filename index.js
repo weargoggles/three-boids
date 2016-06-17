@@ -22,23 +22,53 @@ function init () {
     scene = new THREE.Scene();
     renderer = new THREE.WebGLRenderer();
 
-    let triangles = 2;
-    let instances = 250;
+    const triangles = 4;
+    const instances = 2500;
 
-    let geometry = new THREE.InstancedBufferGeometry();
+    const geometry = new THREE.InstancedBufferGeometry();
 
     geometry.maxInstancedCount = instances;
 
     let vertices = new THREE.BufferAttribute(new Float32Array(triangles * 3 * 3), 3);
 
     vertices.setXYZ(0, 0.025, 0.0125, -0.0125);
-    vertices.setXYZ(1, 0.0, 0.0, 0.0125);
-    vertices.setXYZ(2, 0.0, 0.0, 0.0);
+    vertices.setXYZ(1, 0.0, 0.0, 0.0);
+    vertices.setXYZ(2, 0.0, 0.0, 0.0125);
+
     vertices.setXYZ(3, 0.0, 0.0, 0.0);
-    vertices.setXYZ(4, -0.025, 0.0125, -0.0125);
-    vertices.setXYZ(5, 0.0, 0.0, 0.0125);
+    vertices.setXYZ(4, 0.0, 0.0, 0.0125);
+    vertices.setXYZ(5, -0.025, 0.0125, -0.0125);
+
+    vertices.setXYZ(6, 0.025, 0.0125, -0.0125);
+    vertices.setXYZ(7, 0.0, 0.0, 0.0125);
+    vertices.setXYZ(8, 0.0, 0.0, 0.0);
+
+    vertices.setXYZ(9, 0.0, 0.0, 0.0);
+    vertices.setXYZ(10, -0.025, 0.0125, -0.0125);
+    vertices.setXYZ(11, 0.0, 0.0, 0.0125);
 
     geometry.addAttribute('position', vertices);
+
+    let normals = new THREE.BufferAttribute(new Float32Array(triangles * 3 * 3), 3); // one normal per vertex
+
+    let right_wing_up_normal = (new THREE.Vector3(0.0, 0.0, -0.0125)).cross(new THREE.Vector3(0.025, 0.0125, -0.0125)); //.multiplyScalar(-1);
+    let right_wing_down_normal = (new THREE.Vector3()).copy(right_wing_up_normal).multiplyScalar(-1);
+    let left_wing_up_normal = (new THREE.Vector3(0.025, -0.0125, 0.0125)).cross(new THREE.Vector3(0.0, 0.0, 0.0125)); //.multiplyScalar(-1);
+    let left_wing_down_normal = (new THREE.Vector3()).copy(left_wing_up_normal).multiplyScalar(-1);
+    normals.setXYZ(0, right_wing_up_normal.x, right_wing_up_normal.y, right_wing_up_normal.z);
+    normals.setXYZ(1, right_wing_up_normal.x, right_wing_up_normal.y, right_wing_up_normal.z);
+    normals.setXYZ(2, right_wing_up_normal.x, right_wing_up_normal.y, right_wing_up_normal.z);
+    normals.setXYZ(3, left_wing_up_normal.x, left_wing_up_normal.y, left_wing_up_normal.z);
+    normals.setXYZ(4, left_wing_up_normal.x, left_wing_up_normal.y, left_wing_up_normal.z);
+    normals.setXYZ(5, left_wing_up_normal.x, left_wing_up_normal.y, left_wing_up_normal.z);
+    normals.setXYZ(6, right_wing_down_normal.x, right_wing_down_normal.y, right_wing_down_normal.z);
+    normals.setXYZ(7, right_wing_down_normal.x, right_wing_down_normal.y, right_wing_down_normal.z);
+    normals.setXYZ(8, right_wing_down_normal.x, right_wing_down_normal.y, right_wing_down_normal.z);
+    normals.setXYZ(9, left_wing_down_normal.x, left_wing_down_normal.y, left_wing_down_normal.z);
+    normals.setXYZ(10, left_wing_down_normal.x, left_wing_down_normal.y, left_wing_down_normal.z);
+    normals.setXYZ(11, left_wing_down_normal.x, left_wing_down_normal.y, left_wing_down_normal.z);
+
+    geometry.addAttribute('normal', normals);
 
     displacements = new THREE.InstancedBufferAttribute(new Float32Array(instances * 3), 3, 1);
 
@@ -79,11 +109,15 @@ function init () {
     }
 
     geometry.addAttribute('orientation', orientations);
-
+    let light = new THREE.Vector3(350.0, 350.0, 350.0);
+    // light.normalize();
     var material = new THREE.RawShaderMaterial( {
+        uniforms: {
+            light: { type: 'v3', value: light }
+        },
         vertexShader: fs.readFileSync(__dirname + '/shaders/vertex.glsl', 'utf8'),
         fragmentShader: fs.readFileSync(__dirname + '/shaders/fragment.glsl', 'utf8'),
-        side: THREE.DoubleSide,
+        side: THREE.FrontSide,
         transparent: false
     } );
 
@@ -133,7 +167,7 @@ function render (now) {
         let index = i * 3;
         currentV.set(displacements.array[index], displacements.array[index + 1], displacements.array[index + 2]);
         currentVel.set(velocities.array[index], velocities.array[index + 1], velocities.array[index + 2]);
-        
+
         neg_loc.copy(currentV);
         neg_loc.multiplyScalar(-1);
 
