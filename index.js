@@ -4,7 +4,7 @@ var fs = require('fs');
 
 let camera, scene, renderer;
 
-let displacements, velocities;
+let displacements, velocities, orientations;
 
 let max_velocity = 1;
 let boid_mass = 1;
@@ -94,7 +94,7 @@ function init () {
 
     geometry.addAttribute('velocity', velocities);
 
-    let orientations = new THREE.InstancedBufferAttribute(new Float32Array(instances * 4), 4, 1);
+    orientations = new THREE.InstancedBufferAttribute(new Float32Array(instances * 4), 4, 1);
 
     vector = new THREE.Vector4();
     for (let i = 0, ul = orientations.count; i < ul; i++) {
@@ -109,6 +109,8 @@ function init () {
     }
 
     geometry.addAttribute('orientation', orientations);
+
+
     let light = new THREE.Vector3(350.0, 350.0, 350.0);
     // light.normalize();
     var material = new THREE.RawShaderMaterial( {
@@ -149,6 +151,7 @@ let then = performance.now();
 
 let currentV = new THREE.Vector3();
 let currentVel = new THREE.Vector3();
+let currentO = new THREE.Quaternion();
 let target = new THREE.Vector3(0, 0, 0);
 let neg_loc = new THREE.Vector3();
 let neg_vel = new THREE.Vector3();
@@ -193,7 +196,11 @@ function render (now) {
 
         displacements.setXYZ(i, currentV.x, currentV.y, currentV.z);
         velocities.setXYZ(i, currentVel.x, currentVel.y, currentVel.z);
-
+        //currentO.set(orientations.array[index], orientations.array[index + 1], orientations.array[index + 2]);
+        v_tmp.copy(currentVel);
+        v_tmp.normalize();
+        currentO.setFromAxisAngle(v_tmp, Math.PI / 2);
+        orientations.setXYZW(i, currentO.x, currentO.y, currentO.z, currentO.w);
         /*
         mul(position, -1, neg_loc);
         mul(velocity, -1, neg_vel);
@@ -207,6 +214,7 @@ function render (now) {
     }
     displacements.needsUpdate = true;
     velocities.needsUpdate = true;
+    orientations.needsUpdate = true;
 }
 
 requestAnimationFrame(animate);
