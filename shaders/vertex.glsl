@@ -3,6 +3,7 @@ uniform mat4 modelViewMatrix;
 uniform mat4 projectionMatrix;
 uniform mat3 normalMatrix;
 uniform vec3 light;
+uniform float scale;
 
 attribute vec3 position;
 attribute vec3 displacement;
@@ -22,7 +23,7 @@ void main(){
 //    vPosition = vcV * (2.0 * orientation.w) + (cross(orientation.xyz, vcV) * 2.0 + vPosition);
     vPosition = qtransform(orientation, position);
 
-    gl_Position = projectionMatrix * modelViewMatrix * vec4(displacement + vPosition, 1.0 );
+    gl_Position = projectionMatrix * modelViewMatrix * vec4(displacement + vPosition, 1.0 ) * scale;
 
     // TODO: what is normal matrix?
     vec3 qNormal = cross(orientation.xyz, normal);
