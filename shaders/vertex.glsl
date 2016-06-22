@@ -21,9 +21,9 @@ void main(){
 //    vPosition = position;
 //    vec3 vcV = cross(orientation.xyz, vPosition);
 //    vPosition = vcV * (2.0 * orientation.w) + (cross(orientation.xyz, vcV) * 2.0 + vPosition);
-    vPosition = qtransform(orientation, position);
+    vPosition = qtransform(orientation, position * scale);
 
-    gl_Position = projectionMatrix * modelViewMatrix * vec4(displacement + vPosition, 1.0 ) * scale;
+    gl_Position = projectionMatrix * modelViewMatrix * vec4(displacement + vPosition, 1.0 );
 
     // TODO: what is normal matrix?
     vec3 qNormal = cross(orientation.xyz, normal);

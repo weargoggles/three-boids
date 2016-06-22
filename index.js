@@ -13,11 +13,12 @@ let max_velocity = 1.0;
 let boid_mass = 8;
 let boid_force = 2.5;
 
-let hawk_displacement_buffer, hawk_displacements, hawk_velocities;
+let hawk_displacement_buffer, hawk_displacements, hawk_velocities, hawk_orientations;
 
 let hawk_max_velocity = 2.5;
 let hawk_mass = 5;
 let hawk_force = 5;
+let hawk_search_vector = new THREE.Vector3(2, 2, 2);
 
 const hawk_count = 1;
 
@@ -27,7 +28,7 @@ let sorted, tree, neighbours, neighbourhood = 4.0;
 let GOAL_WEIGHT = 3.5;
 let SEPARATION_WEIGHT = 4.5;
 let HEADING_WEIGHT = 2.8;
-let COHESION_WEIGHT = 1.6;
+let COHESION_WEIGHT = 3.6;
 let HAWK_AVOIDANCE_WEIGHT = 1.5;
 
 let gravity = new THREE.Vector3(0.0, 0.0, 0.0);
@@ -45,7 +46,7 @@ function init() {
     renderer = new THREE.WebGLRenderer();
 
     const triangles = 4;
-    const instances = 2500;
+    const instances = 1500;
 
 
     const hawks = new THREE.InstancedBufferGeometry();
@@ -107,9 +108,9 @@ function init() {
     let vector = new THREE.Vector3();
     for (let i = 0, ul = displacements.count; i < ul; i++) {
         vector.set(
-            Math.random() + 1.5,
-            Math.random() + 1.5,
-            Math.random() - 0.5
+            Math.random() * 6 - 1.5,
+            Math.random() * 6 - 1.5,
+            Math.random() * 6 - 1.5
         );
         displacements.setXYZ(i, vector.x, vector.y, vector.z);
     }
@@ -172,6 +173,22 @@ function init() {
 
     geometry.addAttribute('orientation', orientations);
 
+    hawk_orientations = new THREE.InstancedBufferAttribute(new Float32Array(instances * 4), 4, 1);
+
+    vector = new THREE.Vector4();
+    for (let i = 0, ul = hawk_orientations.count; i < ul; i++) {
+        vector.set(
+            Math.random() * 2 - 1,
+            Math.random() * 2 - 1,
+            Math.random() * 2 - 1,
+            Math.random() * 2 - 1
+        );
+        vector.normalize();
+        hawk_orientations.setXYZW(i, vector.x, vector.y, vector.z, vector.w);
+    }
+
+    hawks.addAttribute('orientation', hawk_orientations);
+
 
     let light = new THREE.Vector3(350.0, 350.0, 350.0);
     // light.normalize();
@@ -202,7 +219,7 @@ function init() {
             colour: {
                 value: new THREE.Vector3(50.0, 0.0, 0.0)
             },
-            scale: {value: 15.0}
+            scale: {value: 5.0}
         },
         vertexShader: vertexShader,
         fragmentShader: fragmentShader
@@ -254,7 +271,6 @@ let separation = new THREE.Vector3(),
 
 let lo = new THREE.Vector3(), hi = new THREE.Vector3(), neighbourhood_v = new THREE.Vector3(1, 1, 1).normalize().multiplyScalar(neighbourhood);
 
-let hawk_search_vector = new THREE.Vector3(5, 5, 5);
 
 function interleave_from_vector(x, y, z) {
     return interleave[3](x << 9, y << 9, z << 9);
@@ -399,9 +415,12 @@ function render(now) {
 
         // tmp_1 will be the target; make tmp_1 the centroid of the nearby boids
         tmp_1.set(0, 0, 0);
+        //tmp_2.copy(currentVel).normalize();
         lo.copy(currentV);
+        //lo.addScaledVector(tmp_2, 2.5);
         lo.addScaledVector(hawk_search_vector, -1);
         hi.copy(currentV);
+        //lo.addScaledVector(tmp_2, hawk_max_velocity);
         hi.add(hawk_search_vector);
         // console.log(lo, hi);
 
@@ -418,6 +437,16 @@ function render(now) {
                 tmp_1.add(tmp_2);
             }
         }
+        separation.set(0, 0, 0);
+        for (let j = 0, nl = hawk_displacements.count, ni; j < nl; j++) {
+            if (i == j) continue;
+            ni = j * 3;
+            neighbour_position.set(hawk_displacement_buffer[ni], hawk_displacement_buffer[ni + 1], hawk_displacement_buffer[ni + 2]);
+            tmp_1.copy(neg_loc).add(neighbour_position);
+            separation.add(tmp_2);
+        }
+        separation.multiplyScalar(-1);
+        separation.normalize();
 
         goal_steering_force.copy(tmp_1);
         goal_steering_force.add(neg_loc);
@@ -426,6 +455,9 @@ function render(now) {
         goal_steering_force.add(neg_vel);
         goal_steering_force.normalize();
         // end neighbour calculations
+        
+        goal_steering_force.addScaledVector(separation, 0.9);
+        goal_steering_force.normalize();
 
         goal_steering_force.multiplyScalar(hawk_force);
         goal_steering_force.multiplyScalar(dt / hawk_mass);
@@ -441,19 +473,19 @@ function render(now) {
         hawk_displacements.setXYZ(i, currentV.x, currentV.y, currentV.z);
         hawk_velocities.setXYZ(i, currentVel.x, currentVel.y, currentVel.z);
         //currentO.set(orientations.array[index], orientations.array[index + 1], orientations.array[index + 2]);
-        //v_tmp.copy(currentVel);
-        //v_tmp.normalize();
-        //tmp_2.set(0.0, 0.0, 1.0);
-        //// tmp_2.normalize();
-        //v_tmp.add(tmp_2);
-        //v_tmp.normalize();
-        //currentO.setFromAxisAngle(v_tmp, Math.PI);
-        //orientations.setXYZW(i, currentO.x, currentO.y, currentO.z, currentO.w);
+        v_tmp.copy(currentVel);
+        v_tmp.normalize();
+        tmp_2.set(0.0, 0.0, 1.0);
+        //tmp_2.normalize();
+        v_tmp.add(tmp_2);
+        v_tmp.normalize();
+        currentO.setFromAxisAngle(v_tmp, Math.PI);
+        hawk_orientations.setXYZW(i, currentO.x, currentO.y, currentO.z, currentO.w);
 
     }
     hawk_displacements.needsUpdate = true;
     hawk_velocities.needsUpdate = true;
-    //orientations.needsUpdate = true;
+    hawk_orientations.needsUpdate = true;
 
     tree = new BTMap();
     for (let i = 0, j = 0, k = 0, ul = displacements.count; i < ul; i++) {
