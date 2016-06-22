@@ -4,6 +4,7 @@
   "description": "",
   "main": "index.js",
   "scripts": {
+    "build": "browserify index.js -t babelify -t brfs > built.js",
     "watch": "budo index.js --live -- -t babelify -t brfs",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
